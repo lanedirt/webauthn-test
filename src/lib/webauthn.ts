@@ -392,23 +392,31 @@ export async function verifyPasskeyAuthentication(
       },
     });
 
+    // Decode clientDataJSON to see what the client sent
+    let decodedClientData = null;
+    try {
+      if (body.response?.clientDataJSON) {
+        const clientDataBuffer = Buffer.from(body.response.clientDataJSON, 'base64url');
+        decodedClientData = JSON.parse(clientDataBuffer.toString('utf-8'));
+      }
+    } catch {
+      decodedClientData = { error: 'Failed to decode clientDataJSON' };
+    }
+
     webauthnDebugger.log('auth-verify-result', 'info', 'Authentication verification completed', {
       verified: verification.verified,
       hasAuthenticationInfo: !!verification.authenticationInfo,
+      receivedClientData: decodedClientData,
+      receivedResponse: {
+        credentialId: body.id,
+        rawId: body.rawId,
+        authenticatorData: body.response?.authenticatorData || null,
+        signature: body.response?.signature || null,
+        userHandle: body.response?.userHandle || null,
+      }
     });
 
     if (!verification.verified) {
-      // Decode clientDataJSON to see what the client sent
-      let decodedClientData = null;
-      try {
-        if (body.response?.clientDataJSON) {
-          const clientDataBuffer = Buffer.from(body.response.clientDataJSON, 'base64url');
-          decodedClientData = JSON.parse(clientDataBuffer.toString('utf-8'));
-        }
-      } catch {
-        decodedClientData = { error: 'Failed to decode clientDataJSON' };
-      }
-
       // Log detailed failure information with RAW values
       webauthnDebugger.log('auth-verify-failed', 'error', 'Authentication verification FAILED', {
         verified: false,

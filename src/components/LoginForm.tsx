@@ -17,7 +17,7 @@ interface LoginFormProps {
 }
 
 export default function LoginForm({ onLogin, onDebugLog }: LoginFormProps) {
-  const [isPasswordLogin, setIsPasswordLogin] = useState(true);
+  const [showPasswordLogin, setShowPasswordLogin] = useState(false);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -113,32 +113,47 @@ export default function LoginForm({ onLogin, onDebugLog }: LoginFormProps) {
           Login
         </h2>
 
-        <div className="mb-4">
-          <div className="flex bg-gray-100 rounded-lg p-1">
+        {!showPasswordLogin ? (
+          <div className="space-y-4">
+            <div>
+              <label htmlFor="passkey-username" className="block text-sm font-medium text-gray-700 mb-1">
+                Username (optional)
+              </label>
+              <input
+                type="text"
+                id="passkey-username"
+                value={formData.username}
+                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
+                placeholder="Leave empty to show all available passkeys"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Enter your username to authenticate with your specific passkeys, or leave empty to see all available passkeys.
+              </p>
+            </div>
             <button
-              onClick={() => setIsPasswordLogin(true)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                isPasswordLogin
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={handlePasskeyLogin}
+              disabled={loading}
+              className="w-full py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium"
             >
-              Password
+              {loading ? 'Authenticating...' : '🔐 Login with Passkey'}
             </button>
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">or</span>
+              </div>
+            </div>
             <button
-              onClick={() => setIsPasswordLogin(false)}
-              className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                !isPasswordLogin
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-600 hover:text-gray-900'
-              }`}
+              onClick={() => setShowPasswordLogin(true)}
+              className="w-full py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 font-medium"
             >
-              Passkey
+              Login with Username & Password
             </button>
           </div>
-        </div>
-
-        {isPasswordLogin ? (
+        ) : (
           <form onSubmit={handlePasswordLogin} className="space-y-4">
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-gray-700 mb-1">
@@ -173,33 +188,14 @@ export default function LoginForm({ onLogin, onDebugLog }: LoginFormProps) {
             >
               {loading ? 'Logging in...' : 'Login'}
             </button>
-          </form>
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="passkey-username" className="block text-sm font-medium text-gray-700 mb-1">
-                Username (optional)
-              </label>
-              <input
-                type="text"
-                id="passkey-username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="Leave empty to show all available passkeys"
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Enter your username to authenticate with your specific passkeys, or leave empty to see all available passkeys.
-              </p>
-            </div>
             <button
-              onClick={handlePasskeyLogin}
-              disabled={loading}
-              className="w-full py-2 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              type="button"
+              onClick={() => setShowPasswordLogin(false)}
+              className="w-full py-2 px-4 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
             >
-              {loading ? 'Authenticating...' : 'Login with Passkey'}
+              Back to Passkey Login
             </button>
-          </div>
+          </form>
         )}
 
         {error && (

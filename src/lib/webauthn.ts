@@ -166,6 +166,13 @@ export async function verifyPasskeyRegistration(
       }
     });
 
+    // Log verification parameters
+    webauthnDebugger.log('verification-params', 'info', 'Verification parameters', {
+      expectedChallenge: expectedChallenge.substring(0, 20) + '...',
+      expectedOrigin: ORIGIN,
+      expectedRPID: RP_ID,
+    });
+
     const verification = await verifyRegistrationResponse({
       response: body,
       expectedChallenge,
@@ -177,6 +184,22 @@ export async function verifyPasskeyRegistration(
       verified: verification.verified,
       hasRegistrationInfo: !!verification.registrationInfo,
     });
+
+    if (!verification.verified) {
+      // Log detailed failure information
+      webauthnDebugger.log('verification-failed', 'error', 'Registration verification FAILED', {
+        verified: false,
+        reason: 'Verification returned false - possible causes: challenge mismatch, origin mismatch, RP ID mismatch, or invalid attestation',
+        expectedChallenge: expectedChallenge.substring(0, 20) + '...',
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID,
+        receivedResponse: {
+          id: body.id,
+          type: body.type,
+          responseFields: Object.keys(body.response || {})
+        }
+      });
+    }
 
     if (verification.verified && verification.registrationInfo) {
       // Use the credential ID from the client response (already in base64url format)
@@ -317,6 +340,15 @@ export async function verifyPasskeyAuthentication(
       counter: passkey.counter
     });
 
+    // Log verification parameters
+    webauthnDebugger.log('auth-verify-params', 'info', 'Verification parameters', {
+      expectedChallenge: expectedChallenge.substring(0, 20) + '...',
+      expectedOrigin: ORIGIN,
+      expectedRPID: RP_ID,
+      storedCounter: passkey.counter,
+      credentialIdMatch: passkey.credential_id === credentialId
+    });
+
     const verification = await verifyAuthenticationResponse({
       response: body,
       expectedChallenge,
@@ -333,6 +365,25 @@ export async function verifyPasskeyAuthentication(
       verified: verification.verified,
       hasAuthenticationInfo: !!verification.authenticationInfo,
     });
+
+    if (!verification.verified) {
+      // Log detailed failure information
+      webauthnDebugger.log('auth-verify-failed', 'error', 'Authentication verification FAILED', {
+        verified: false,
+        reason: 'Verification returned false - possible causes: signature mismatch, challenge mismatch, origin mismatch, RP ID mismatch, or counter anomaly',
+        expectedChallenge: expectedChallenge.substring(0, 20) + '...',
+        expectedOrigin: ORIGIN,
+        expectedRPID: RP_ID,
+        storedPublicKey: passkey.public_key.substring(0, 40) + '...',
+        storedCounter: passkey.counter,
+        credentialId: credentialId,
+        receivedResponse: {
+          id: body.id,
+          type: body.type,
+          responseFields: Object.keys(body.response || {})
+        }
+      });
+    }
 
     if (verification.verified && verification.authenticationInfo) {
       // Update counter with the actual value from the authentication response

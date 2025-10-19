@@ -89,113 +89,113 @@ export default function Home() {
           </p>
         </header>
 
-        {!user ? (
-          <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-6">
-                <WebAuthnSupport />
+        <div className="max-w-4xl mx-auto">
+          <div className="grid md:grid-cols-2 gap-8">
+            {/* Left Column - Main Content */}
+            <div className="space-y-6">
+              {!user ? (
+                <>
+                  {!showRegister ? (
+                    <LoginForm onLogin={handleLogin} onDebugLog={handleDebugLog} />
+                  ) : (
+                    <RegisterForm onRegister={handleRegister} />
+                  )}
 
-                {!showRegister ? (
-                  <LoginForm onLogin={handleLogin} onDebugLog={handleDebugLog} />
-                ) : (
-                  <RegisterForm onRegister={handleRegister} />
-                )}
+                  <div className="text-center">
+                    <button
+                      onClick={() => setShowRegister(!showRegister)}
+                      className="text-blue-600 hover:text-blue-800 underline"
+                    >
+                      {showRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
+                    </button>
+                  </div>
 
-                <div className="text-center">
-                  <button
-                    onClick={() => setShowRegister(!showRegister)}
-                    className="text-blue-600 hover:text-blue-800 underline"
-                  >
-                    {showRegister ? 'Already have an account? Login' : "Don't have an account? Register"}
-                  </button>
-                </div>
-              </div>
+                  <WebAuthnSupport />
+                </>
+              ) : (
+                <>
+                  <div className="bg-white rounded-lg shadow-md p-6">
+                    <div className="text-center mb-6">
+                      <h2 className="text-xl font-semibold text-gray-900">
+                        Welcome, {user.username}!
+                      </h2>
+                      <p className="text-gray-600">Manage your passkeys and test authentication</p>
+                    </div>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full py-3 px-4 bg-gray-600 text-white rounded-lg hover:bg-gray-700 font-medium"
+                    >
+                      Logout
+                    </button>
+                  </div>
 
-              <div className="space-y-6">
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">How to Use</h3>
-                  <div className="space-y-3 text-sm text-gray-600">
-                    <div className="flex items-start space-x-2">
-                      <span className="text-blue-500 font-bold">1.</span>
-                      <span>Create an account with username and password</span>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="text-blue-500 font-bold">2.</span>
-                      <span>Login and add one or more passkeys to your account</span>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="text-blue-500 font-bold">3.</span>
-                      <span>Logout and test logging in with your passkey</span>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <span className="text-blue-500 font-bold">4.</span>
-                      <span>Use the debug panel to see all WebAuthn messages and errors</span>
+                  <PasskeyManager user={user} onDebugLog={handleDebugLog} />
+                </>
+              )}
+            </div>
+
+            {/* Right Column - Info */}
+            <div className="space-y-6">
+              {!user ? (
+                <>
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">How to Use</h3>
+                    <div className="space-y-3 text-sm text-gray-600">
+                      <div className="flex items-start space-x-2">
+                        <span className="text-blue-500 font-bold">1.</span>
+                        <span>Create an account with username and password</span>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <span className="text-blue-500 font-bold">2.</span>
+                        <span>Login and add one or more passkeys to your account</span>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <span className="text-blue-500 font-bold">3.</span>
+                        <span>Logout and test logging in with your passkey</span>
+                      </div>
+                      <div className="flex items-start space-x-2">
+                        <span className="text-blue-500 font-bold">4.</span>
+                        <span>Use the debug panel to see all WebAuthn messages and errors</span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Features</h3>
-                  <ul className="space-y-2 text-sm text-gray-600">
-                    <li className="flex items-center space-x-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Password-based authentication</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Passkey registration and authentication</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Multiple passkeys per account</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Comprehensive debug logging</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Browser compatibility check</span>
-                    </li>
-                    <li className="flex items-center space-x-2">
-                      <span className="text-green-500">✓</span>
-                      <span>Local SQLite database</span>
-                    </li>
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-semibold text-gray-900">
-                    Welcome, {user.username}!
-                  </h2>
-                  <p className="text-gray-600">Manage your passkeys and test authentication</p>
-                </div>
-                <button
-                  onClick={handleLogout}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                >
-                  Logout
-                </button>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <PasskeyManager user={user} onDebugLog={handleDebugLog} />
-              </div>
-
-              <div>
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                    <h3 className="text-lg font-medium text-gray-900 mb-4">Features</h3>
+                    <ul className="space-y-2 text-sm text-gray-600">
+                      <li className="flex items-center space-x-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Password-based authentication</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Passkey registration and authentication</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Multiple passkeys per account</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Comprehensive debug logging</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Browser compatibility check</span>
+                      </li>
+                      <li className="flex items-center space-x-2">
+                        <span className="text-green-500">✓</span>
+                        <span>Local SQLite database</span>
+                      </li>
+                    </ul>
+                  </div>
+                </>
+              ) : (
                 <WebAuthnSupport />
-              </div>
+              )}
             </div>
           </div>
-        )}
+        </div>
 
         <DebugPanel logs={debugLogs} onClear={clearDebugLogs} />
       </div>

@@ -30,9 +30,11 @@ export async function POST(request: NextRequest) {
 
     const result = await generatePasskeyRegistrationOptions(session.user_id, username, dbQueries);
 
-    // Store challenge in session
+    // Store challenge in session (delete old one first if it exists)
+    const challengeSessionId = `challenge-${sessionId}`;
+    dbQueries.deleteSession.run(challengeSessionId);
     dbQueries.createSession.run(
-      `challenge-${sessionId}`,
+      challengeSessionId,
       session.user_id,
       result.challenge,
       new Date(Date.now() + 5 * 60 * 1000).toISOString() // 5 minutes

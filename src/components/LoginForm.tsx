@@ -3,9 +3,17 @@
 import { useState } from 'react';
 import { startAuthentication } from '@simplewebauthn/browser';
 
+interface DebugLog {
+  timestamp: string;
+  step: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+  data?: unknown;
+}
+
 interface LoginFormProps {
   onLogin: (user: { id: number; username: string }) => void;
-  onDebugLog: (logs: any[]) => void;
+  onDebugLog: (logs: DebugLog[]) => void;
 }
 
 export default function LoginForm({ onLogin, onDebugLog }: LoginFormProps) {
@@ -30,13 +38,13 @@ export default function LoginForm({ onLogin, onDebugLog }: LoginFormProps) {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         onLogin({ id: data.userId, username: data.username });
       } else {
         setError(data.error || 'Login failed');
       }
-    } catch (err) {
+    } catch {
       setError('Login failed');
     } finally {
       setLoading(false);
@@ -64,7 +72,7 @@ export default function LoginForm({ onLogin, onDebugLog }: LoginFormProps) {
 
       // Start authentication
       const credential = await startAuthentication(optionsData.options);
-      
+
       // Verify authentication
       const verifyResponse = await fetch('/api/passkeys/authenticate/verify', {
         method: 'POST',
@@ -83,15 +91,15 @@ export default function LoginForm({ onLogin, onDebugLog }: LoginFormProps) {
       } else {
         setError(verifyData.message || 'Passkey authentication failed');
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Passkey authentication failed';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Passkey authentication failed';
       setError(errorMessage);
       onDebugLog([{
         timestamp: new Date().toISOString(),
         step: 'authentication-error',
         type: 'error',
         message: errorMessage,
-        data: err
+        data: error
       }]);
     } finally {
       setLoading(false);

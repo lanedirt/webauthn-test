@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  webauthn-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: webauthn-test
+    ports:
+      - "3200:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      # WebAuthn Configuration
+      # For localhost/development, use these defaults:
+      - WEBAUTHN_RP_ID=localhost
+      - WEBAUTHN_RP_NAME=WebAuthn Test Demo
+      - WEBAUTHN_ORIGIN=http://localhost:3200
+      # For production, uncomment and set your domain:
+      # - WEBAUTHN_RP_ID=yourdomain.com
+      # - WEBAUTHN_RP_NAME=Your App Name
+      # - WEBAUTHN_ORIGIN=https://yourdomain.com
+    volumes:
+      # Bind mount for SQLite database persistence
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/api/health', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

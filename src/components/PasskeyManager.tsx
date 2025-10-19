@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { startRegistration, startAuthentication } from '@simplewebauthn/browser';
+import { startRegistration } from '@simplewebauthn/browser';
 
 interface Passkey {
   id: number;
@@ -13,9 +13,17 @@ interface Passkey {
   lastUsedAt: string | null;
 }
 
+interface DebugLog {
+  timestamp: string;
+  step: string;
+  type: 'info' | 'success' | 'warning' | 'error';
+  message: string;
+  data?: unknown;
+}
+
 interface PasskeyManagerProps {
   user: { id: number; username: string };
-  onDebugLog: (logs: any[]) => void;
+  onDebugLog: (logs: DebugLog[]) => void;
 }
 
 export default function PasskeyManager({ user, onDebugLog }: PasskeyManagerProps) {
@@ -28,13 +36,13 @@ export default function PasskeyManager({ user, onDebugLog }: PasskeyManagerProps
     try {
       const response = await fetch('/api/passkeys/list');
       const data = await response.json();
-      
+
       if (data.success) {
         setPasskeys(data.passkeys);
       } else {
         setError(data.error || 'Failed to load passkeys');
       }
-    } catch (err) {
+    } catch {
       setError('Failed to load passkeys');
     }
   };
@@ -65,7 +73,7 @@ export default function PasskeyManager({ user, onDebugLog }: PasskeyManagerProps
 
       // Start registration
       const credential = await startRegistration(optionsData.options);
-      
+
       // Verify registration
       const verifyResponse = await fetch('/api/passkeys/register/verify', {
         method: 'POST',
@@ -156,7 +164,7 @@ export default function PasskeyManager({ user, onDebugLog }: PasskeyManagerProps
         <div className="p-4 bg-gray-50 rounded-lg text-center">
           <p className="text-gray-600">No passkeys registered yet</p>
           <p className="text-sm text-gray-500 mt-1">
-            Click "Add Passkey" to register your first passkey
+            Click &quot;Add Passkey&quot; to register your first passkey
           </p>
         </div>
       ) : (

@@ -41,7 +41,7 @@ export default function DebugPanel({ logs, onClear }: DebugPanelProps) {
     return new Date(timestamp).toLocaleTimeString();
   };
 
-  const formatData = (data: any) => {
+  const formatData = (data: unknown) => {
     if (!data) return null;
     return JSON.stringify(data, null, 2);
   };
@@ -67,7 +67,7 @@ export default function DebugPanel({ logs, onClear }: DebugPanelProps) {
           </button>
         </div>
       </div>
-      
+
       <div className={`overflow-y-auto ${isExpanded ? 'max-h-80' : 'max-h-32'}`}>
         {logs.length === 0 ? (
           <div className="p-3 text-sm text-gray-500 text-center">
@@ -90,11 +90,11 @@ export default function DebugPanel({ logs, onClear }: DebugPanelProps) {
                       </span>
                     </div>
                     <div className="mt-1 text-gray-700">{log.message}</div>
-                    {log.data && isExpanded && (
+                    {(log.data && isExpanded) ? (
                       <pre className="mt-2 p-2 bg-gray-100 rounded text-xs overflow-x-auto">
                         {formatData(log.data)}
                       </pre>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               </div>

@@ -37,13 +37,13 @@ export default function RegisterForm({ onRegister }: RegisterFormProps) {
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
         onRegister({ id: data.userId, username: data.username });
       } else {
         setError(data.error || 'Registration failed');
       }
-    } catch (err) {
+    } catch {
       setError('Registration failed');
     } finally {
       setLoading(false);
@@ -75,7 +75,7 @@ export default function RegisterForm({ onRegister }: RegisterFormProps) {
               Must be at least 3 characters long
             </p>
           </div>
-          
+
           <div>
             <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
               Password
@@ -93,7 +93,7 @@ export default function RegisterForm({ onRegister }: RegisterFormProps) {
               Must be at least 6 characters long
             </p>
           </div>
-          
+
           <div>
             <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
               Confirm Password
@@ -107,7 +107,7 @@ export default function RegisterForm({ onRegister }: RegisterFormProps) {
               required
             />
           </div>
-          
+
           <button
             type="submit"
             disabled={loading}

@@ -5,17 +5,45 @@ import {
   verifyAuthenticationResponse,
   type GenerateRegistrationOptionsOpts,
   type GenerateAuthenticationOptionsOpts,
-  type VerifyRegistrationResponseOpts,
-  type VerifyAuthenticationResponseOpts,
-  type PublicKeyCredentialDescriptor,
+  type RegistrationResponseJSON,
+  type AuthenticationResponseJSON,
+  type PublicKeyCredentialCreationOptionsJSON,
+  type PublicKeyCredentialRequestOptionsJSON,
 } from '@simplewebauthn/server';
 
+// Database query types
+interface DbQueries {
+  getPasskeysByUserId: { all: (userId: number) => unknown[] };
+  getUserByUsername: { get: (username: string) => unknown };
+  getPasskeyByCredentialId: { get: (credentialId: string) => unknown };
+  createPasskey: { run: (...args: unknown[]) => void };
+  updatePasskeyCounter: { run: (counter: number, credentialId: string) => void };
+}
+
+interface Passkey {
+  credential_id: string;
+  device_type: string;
+  transports: string | null;
+  counter: number;
+}
+
+interface User {
+  id: number;
+  username: string;
+}
+
+interface PasskeyWithUser extends Passkey {
+  user_id: number;
+  username: string;
+  public_key: string;
+}
+
 // WebAuthn configuration
-const RP_ID = process.env.NODE_ENV === 'production' ? 'yourdomain.com' : 'localhost';
-const RP_NAME = 'WebAuthn Test Demo';
-const ORIGIN = process.env.NODE_ENV === 'production'
+const RP_ID = process.env.WEBAUTHN_RP_ID || (process.env.NODE_ENV === 'production' ? 'yourdomain.com' : 'localhost');
+const RP_NAME = process.env.WEBAUTHN_RP_NAME || 'WebAuthn Test Demo';
+const ORIGIN = process.env.WEBAUTHN_ORIGIN || (process.env.NODE_ENV === 'production'
   ? 'https://yourdomain.com'
-  : 'http://localhost:3000';
+  : 'http://localhost:3200');
 
 // Debug logging interface
 export interface DebugLog {
@@ -23,13 +51,13 @@ export interface DebugLog {
   step: string;
   type: 'info' | 'success' | 'warning' | 'error';
   message: string;
-  data?: any;
+  data?: unknown;
 }
 
 export class WebAuthnDebugger {
   private logs: DebugLog[] = [];
 
-  log(step: string, type: DebugLog['type'], message: string, data?: any) {
+  log(step: string, type: DebugLog['type'], message: string, data?: unknown) {
     const log: DebugLog = {
       timestamp: new Date().toISOString(),
       step,
@@ -61,14 +89,14 @@ export const webauthnDebugger = new WebAuthnDebugger();
 export async function generatePasskeyRegistrationOptions(
   userId: number,
   username: string,
-  dbQueries: any
-): Promise<{ options: any; challenge: string; debugLogs: DebugLog[] }> {
+  dbQueries: DbQueries
+): Promise<{ options: PublicKeyCredentialCreationOptionsJSON; challenge: string; debugLogs: DebugLog[] }> {
   try {
     webauthnDebugger.clearLogs();
     webauthnDebugger.log('registration-start', 'info', 'Starting passkey registration process', { userId, username });
 
     // Get existing passkeys for this user
-    const existingPasskeys = dbQueries.getPasskeysByUserId.all(userId) as any[];
+    const existingPasskeys = dbQueries.getPasskeysByUserId.all(userId) as Passkey[];
     webauthnDebugger.log('registration-query', 'info', 'Retrieved existing passkeys', {
       count: existingPasskeys.length,
       passkeys: existingPasskeys.map(p => ({ id: p.credential_id, device_type: p.device_type }))
@@ -117,10 +145,10 @@ export async function generatePasskeyRegistrationOptions(
 }
 
 export async function verifyPasskeyRegistration(
-  body: any,
+  body: RegistrationResponseJSON,
   expectedChallenge: string,
   userId: number,
-  dbQueries: any
+  dbQueries: DbQueries
 ): Promise<{ verified: boolean; credentialId: string; debugLogs: DebugLog[] }> {
   try {
     webauthnDebugger.clearLogs();
@@ -151,7 +179,8 @@ export async function verifyPasskeyRegistration(
     });
 
     if (verification.verified && verification.registrationInfo) {
-      const credentialId = Buffer.from(verification.registrationInfo.credential.id).toString('base64url');
+      // Use the credential ID from the client response (already in base64url format)
+      const credentialId = body.id;
 
       // Store the passkey in database
       const deviceType = verification.registrationInfo.aaguid === '00000000-0000-0000-0000-000000000000'
@@ -164,9 +193,9 @@ export async function verifyPasskeyRegistration(
         userId,
         credentialId,
         Buffer.from(verification.registrationInfo.credential.publicKey).toString('base64url'),
-        0, // counter starts at 0 for new passkeys
+        verification.registrationInfo.credential.counter,
         deviceType,
-        verification.registrationInfo.credentialBackedUp,
+        verification.registrationInfo.credentialBackedUp ? 1 : 0,
         transports
       );
 
@@ -180,9 +209,7 @@ export async function verifyPasskeyRegistration(
 
     return {
       verified: verification.verified,
-      credentialId: verification.verified && verification.registrationInfo
-        ? Buffer.from(verification.registrationInfo.credential.id).toString('base64url')
-        : '',
+      credentialId: verification.verified ? body.id : '',
       debugLogs: webauthnDebugger.getLogs()
     };
   } catch (error) {
@@ -198,19 +225,19 @@ export async function verifyPasskeyRegistration(
 // Authentication functions
 export async function generatePasskeyAuthenticationOptions(
   username: string | undefined,
-  dbQueries: any
-): Promise<{ options: any; challenge: string; debugLogs: DebugLog[] }> {
+  dbQueries: DbQueries
+): Promise<{ options: PublicKeyCredentialRequestOptionsJSON; challenge: string; debugLogs: DebugLog[] }> {
   try {
     webauthnDebugger.clearLogs();
     webauthnDebugger.log('auth-start', 'info', 'Starting passkey authentication process', { username });
 
-    let allowCredentials: any[] = [];
+    let allowCredentials: Array<{ id: string; type: 'public-key'; transports?: AuthenticatorTransport[] }> = [];
 
     if (username) {
       // Get user's passkeys
-      const user = dbQueries.getUserByUsername.get(username) as any;
+      const user = dbQueries.getUserByUsername.get(username) as User | undefined;
       if (user) {
-        const passkeys = dbQueries.getPasskeysByUserId.all(user.id) as any[];
+        const passkeys = dbQueries.getPasskeysByUserId.all(user.id) as Passkey[];
         allowCredentials = passkeys.map(passkey => ({
           id: passkey.credential_id,
           type: 'public-key' as const,
@@ -251,9 +278,9 @@ export async function generatePasskeyAuthenticationOptions(
 }
 
 export async function verifyPasskeyAuthentication(
-  body: any,
+  body: AuthenticationResponseJSON,
   expectedChallenge: string,
-  dbQueries: any
+  dbQueries: DbQueries
 ): Promise<{ verified: boolean; userId: number; username: string; debugLogs: DebugLog[] }> {
   try {
     webauthnDebugger.clearLogs();
@@ -274,8 +301,9 @@ export async function verifyPasskeyAuthentication(
     });
 
     // Find the passkey in database
-    const credentialId = Buffer.from(body.rawId, 'base64url').toString('base64url');
-    const passkey = dbQueries.getPasskeyByCredentialId.get(credentialId) as any;
+    // body.id is the base64url-encoded credential ID
+    const credentialId = body.id;
+    const passkey = dbQueries.getPasskeyByCredentialId.get(credentialId) as PasskeyWithUser | undefined;
 
     if (!passkey) {
       webauthnDebugger.log('auth-verify-error', 'error', 'Passkey not found in database', { credentialId });
@@ -296,7 +324,7 @@ export async function verifyPasskeyAuthentication(
       expectedRPID: RP_ID,
       credential: {
         id: passkey.credential_id,
-        publicKey: passkey.public_key,
+        publicKey: new Uint8Array(Buffer.from(passkey.public_key, 'base64url')),
         counter: passkey.counter,
       },
     });
@@ -306,15 +334,17 @@ export async function verifyPasskeyAuthentication(
       hasAuthenticationInfo: !!verification.authenticationInfo,
     });
 
-    if (verification.verified) {
-      // Update counter (simplified for now)
+    if (verification.verified && verification.authenticationInfo) {
+      // Update counter with the actual value from the authentication response
+      const newCounter = verification.authenticationInfo.newCounter;
       dbQueries.updatePasskeyCounter.run(
-        passkey.counter + 1,
+        newCounter,
         credentialId
       );
 
       webauthnDebugger.log('auth-verify-updated', 'success', 'Passkey counter updated', {
-        newCounter: passkey.counter + 1
+        oldCounter: passkey.counter,
+        newCounter: newCounter
       });
     }
 
@@ -335,7 +365,14 @@ export async function verifyPasskeyAuthentication(
 }
 
 // Utility functions
-export function getWebAuthnSupport(): { supported: boolean; details: any } {
+export function getWebAuthnSupport(): { supported: boolean; details: {
+  hasPublicKeyCredential: boolean;
+  hasNavigatorCredentials: boolean;
+  hasCreate: boolean;
+  hasGet: boolean;
+  userAgent: string;
+  platform: string;
+} } {
   const details = {
     hasPublicKeyCredential: typeof window !== 'undefined' && 'PublicKeyCredential' in window,
     hasNavigatorCredentials: typeof window !== 'undefined' && 'credentials' in navigator,

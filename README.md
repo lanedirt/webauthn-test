@@ -2,6 +2,8 @@
 
 A comprehensive Next.js application for testing and debugging WebAuthn passkey authentication. This demo allows users to create accounts, register passkeys, and test authentication flows with detailed debugging information.
 
+> **Quick Start**: New to this project? See [QUICKSTART.md](QUICKSTART.md) for a 3-step guide to get running immediately!
+
 ## Features
 
 - **User Registration & Login**: Create accounts with username/password
@@ -16,11 +18,30 @@ A comprehensive Next.js application for testing and debugging WebAuthn passkey a
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm or yarn
+- Node.js 18+ (for local development)
+- Docker & Docker Compose (for containerized deployment)
 - A modern browser with WebAuthn support
 
 ### Installation
+
+#### Option 1: Docker Deployment (Recommended)
+
+1. Clone the repository:
+```bash
+git clone <repository-url>
+cd webauthn-test
+```
+
+2. Start the application with Docker Compose:
+```bash
+docker-compose up -d
+```
+
+3. Open [http://localhost:3000](http://localhost:3000) in your browser
+
+For detailed Docker deployment instructions, see [DOCKER.md](DOCKER.md).
+
+#### Option 2: Local Development
 
 1. Clone the repository:
 ```bash
@@ -38,7 +59,7 @@ npm install
 npm run dev
 ```
 
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
+4. Open [http://localhost:3200](http://localhost:3200) in your browser
 
 ## Usage
 
@@ -128,12 +149,31 @@ CREATE TABLE webauthn_sessions (
 
 ### WebAuthn Configuration
 
-The application is configured for localhost development:
+The application is configured via environment variables:
+
+**Default (localhost development):**
 - **RP ID**: `localhost`
 - **RP Name**: `WebAuthn Test Demo`
-- **Origin**: `http://localhost:3000`
+- **Origin**: `http://localhost:3200`
 
-For production deployment, update these values in `/src/lib/webauthn.ts`.
+**Production deployment:**
+
+Set these environment variables in `docker-compose.yml`:
+```yaml
+environment:
+  - WEBAUTHN_RP_ID=yourdomain.com
+  - WEBAUTHN_RP_NAME=Your App Name
+  - WEBAUTHN_ORIGIN=https://yourdomain.com
+```
+
+Or in local `.env` file:
+```bash
+WEBAUTHN_RP_ID=yourdomain.com
+WEBAUTHN_RP_NAME=Your App Name
+WEBAUTHN_ORIGIN=https://yourdomain.com
+```
+
+**Important:** Passkeys are tied to the `RP_ID`. Changing it will invalidate existing passkeys.
 
 ## Debugging
 
@@ -159,6 +199,58 @@ The debug panel provides comprehensive logging for:
    - Verify the passkey is still registered
    - Check that you're using the correct username
    - Look at debug logs for verification errors
+
+## Deployment
+
+### Docker Production Deployment
+
+The application is fully containerized and ready for production deployment:
+
+```bash
+# Build and start
+docker-compose up -d
+
+# View logs
+docker-compose logs -f
+
+# Stop
+docker-compose down
+```
+
+**Key features:**
+- Multi-stage build for optimized image size
+- SQLite database persistence via volume mount
+- Health checks for monitoring
+- Production-ready configuration
+
+See [DOCKER.md](DOCKER.md) for complete deployment guide including:
+- HTTPS/TLS configuration
+- Reverse proxy setup (Nginx, Traefik)
+- Environment configuration
+- Backup strategies
+- Production considerations
+
+### Production Checklist
+
+Before deploying to production:
+
+1. **Update WebAuthn configuration** in `docker-compose.yml`:
+   ```yaml
+   environment:
+     - WEBAUTHN_RP_ID=yourdomain.com
+     - WEBAUTHN_RP_NAME=Your App Name
+     - WEBAUTHN_ORIGIN=https://yourdomain.com
+   ```
+
+2. **Configure HTTPS**: WebAuthn requires HTTPS in production
+   - Use a reverse proxy (Nginx, Traefik, Caddy)
+   - Obtain SSL certificates (Let's Encrypt recommended)
+
+3. **Environment variables**: Update `docker-compose.yml` or create `.env` file based on `.env.example`
+
+4. **Database backup**: Set up regular backups of the `./data` directory
+
+**Note:** All WebAuthn configuration is now controlled via environment variables - no code changes needed!
 
 ## Development
 

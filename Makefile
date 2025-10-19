@@ -10,6 +10,7 @@ build: ## Build the Docker image
 	docker-compose build
 
 up: ## Start the application
+	@mkdir -p data
 	docker-compose up -d
 
 down: ## Stop the application

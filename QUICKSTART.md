@@ -23,7 +23,7 @@ make up
 
 Open your browser and navigate to:
 ```
-http://localhost:3000
+http://localhost:3200
 ```
 
 ### 3. Create Your First Passkey
@@ -85,7 +85,22 @@ ports:
   - "8080:3000"  # Change to any available port
 ```
 
-### Database Issues
+### Database Permission Issues
+
+If you see `SQLITE_READONLY` errors:
+
+```bash
+# Make data directory writable
+chmod 777 ./data
+chmod 666 ./data/webauthn.db  # if database already exists
+
+# Restart the application
+docker-compose restart
+```
+
+### Reset Database
+
+To start fresh with a new database:
 
 ```bash
 # Stop the app

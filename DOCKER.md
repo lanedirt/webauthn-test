@@ -15,9 +15,19 @@ This guide explains how to deploy the WebAuthn Test application using Docker and
    docker-compose up -d
    ```
 
+   Or use the provided script:
+   ```bash
+   ./docker-start.sh
+   ```
+
+   Or use the Makefile:
+   ```bash
+   make up
+   ```
+
 2. **Access the application:**
 
-   Open your browser and navigate to `http://localhost:3000`
+   Open your browser and navigate to `http://localhost:3200`
 
 3. **View logs:**
 
@@ -149,9 +159,17 @@ lsof -i :3000
 
 ### Database permission issues
 
+The `./data` directory is mounted from your host machine. If you encounter `SQLITE_READONLY` errors:
+
 ```bash
-# Ensure data directory has correct permissions
-chmod 755 ./data
+# Ensure data directory exists and is writable
+chmod 777 ./data
+
+# If database already exists, make it writable too
+chmod 666 ./data/webauthn.db
+
+# Restart the application
+docker-compose restart
 ```
 
 ### Rebuild from scratch

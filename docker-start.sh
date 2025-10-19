@@ -23,7 +23,7 @@ if ! command -v docker-compose &> /dev/null; then
     exit 1
 fi
 
-# Check if data directory exists
+# Create data directory if it doesn't exist
 if [ ! -d "./data" ]; then
     echo "📁 Creating data directory..."
     mkdir -p ./data

@@ -186,17 +186,48 @@ export async function verifyPasskeyRegistration(
     });
 
     if (!verification.verified) {
-      // Log detailed failure information
+      // Decode clientDataJSON to see what the client sent
+      let decodedClientData = null;
+      try {
+        if (body.response?.clientDataJSON) {
+          const clientDataBuffer = Buffer.from(body.response.clientDataJSON, 'base64url');
+          decodedClientData = JSON.parse(clientDataBuffer.toString('utf-8'));
+        }
+      } catch {
+        decodedClientData = { error: 'Failed to decode clientDataJSON' };
+      }
+
+      // Log detailed failure information with RAW values
       webauthnDebugger.log('verification-failed', 'error', 'Registration verification FAILED', {
         verified: false,
         reason: 'Verification returned false - possible causes: challenge mismatch, origin mismatch, RP ID mismatch, or invalid attestation',
-        expectedChallenge: expectedChallenge.substring(0, 20) + '...',
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID,
-        receivedResponse: {
-          id: body.id,
+
+        // Expected values
+        expected: {
+          challenge: expectedChallenge,
+          origin: ORIGIN,
+          rpId: RP_ID,
+        },
+
+        // Received values (RAW)
+        received: {
+          credentialId: body.id,
+          rawId: body.rawId,
           type: body.type,
-          responseFields: Object.keys(body.response || {})
+          attestationObject: body.response?.attestationObject || null,
+          clientDataJSON: body.response?.clientDataJSON || null,
+          transports: body.response?.transports || null,
+        },
+
+        // Decoded client data for easy inspection
+        decodedClientData,
+
+        // Check specific mismatches
+        possibleIssues: {
+          challengeMismatch: decodedClientData?.challenge !== expectedChallenge,
+          originMismatch: decodedClientData?.origin !== ORIGIN,
+          clientDataChallengeValue: decodedClientData?.challenge,
+          clientDataOriginValue: decodedClientData?.origin,
         }
       });
     }
@@ -367,20 +398,51 @@ export async function verifyPasskeyAuthentication(
     });
 
     if (!verification.verified) {
-      // Log detailed failure information
+      // Decode clientDataJSON to see what the client sent
+      let decodedClientData = null;
+      try {
+        if (body.response?.clientDataJSON) {
+          const clientDataBuffer = Buffer.from(body.response.clientDataJSON, 'base64url');
+          decodedClientData = JSON.parse(clientDataBuffer.toString('utf-8'));
+        }
+      } catch {
+        decodedClientData = { error: 'Failed to decode clientDataJSON' };
+      }
+
+      // Log detailed failure information with RAW values
       webauthnDebugger.log('auth-verify-failed', 'error', 'Authentication verification FAILED', {
         verified: false,
         reason: 'Verification returned false - possible causes: signature mismatch, challenge mismatch, origin mismatch, RP ID mismatch, or counter anomaly',
-        expectedChallenge: expectedChallenge.substring(0, 20) + '...',
-        expectedOrigin: ORIGIN,
-        expectedRPID: RP_ID,
-        storedPublicKey: passkey.public_key.substring(0, 40) + '...',
-        storedCounter: passkey.counter,
-        credentialId: credentialId,
-        receivedResponse: {
-          id: body.id,
+
+        // Expected values
+        expected: {
+          challenge: expectedChallenge,
+          origin: ORIGIN,
+          rpId: RP_ID,
+          publicKey: passkey.public_key,
+          counter: passkey.counter,
+        },
+
+        // Received values (RAW)
+        received: {
+          credentialId: body.id,
+          rawId: body.rawId,
           type: body.type,
-          responseFields: Object.keys(body.response || {})
+          authenticatorData: body.response?.authenticatorData || null,
+          clientDataJSON: body.response?.clientDataJSON || null,
+          signature: body.response?.signature || null,
+          userHandle: body.response?.userHandle || null,
+        },
+
+        // Decoded client data for easy inspection
+        decodedClientData,
+
+        // Check specific mismatches
+        possibleIssues: {
+          challengeMismatch: decodedClientData?.challenge !== expectedChallenge,
+          originMismatch: decodedClientData?.origin !== ORIGIN,
+          clientDataChallengeValue: decodedClientData?.challenge,
+          clientDataOriginValue: decodedClientData?.origin,
         }
       });
     }
